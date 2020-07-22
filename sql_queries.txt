@@ -1,0 +1,1781 @@
+/* By: Ercan Sen */
+/* Purpose: Takes in csv files that are organized by ballot box and creates aggregated (by neighborhood) and feature-engineered tables */
+
+
+/* Creates a new table for each election. Note that the column names differ since not all parties/options appeared every time */
+
+/* Election 1: June 23, 2019 -- Mayoral Election Rerun */
+CREATE TABLE reelect_2019 (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    registered INTEGER,
+    voted INTEGER,
+    valid INTEGER,
+    akp INTEGER,
+    chp INTEGER,
+    sp INTEGER
+);
+
+/* Election 2: March 31, 2019 -- Local Election */
+CREATE TABLE local_2019 (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    registered INTEGER,
+    voted INTEGER,
+    valid INTEGER,
+    akp INTEGER,
+    chp INTEGER,
+    sp INTEGER
+);
+
+/* Election 3: June 24, 2018 -- General Election - MPs */
+CREATE TABLE mp_2018 (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    registered INTEGER,
+    voted INTEGER,
+    valid INTEGER,
+    akp INTEGER,
+    chp INTEGER,
+    mhp INTEGER,
+    iyip INTEGER,
+    hdp INTEGER,
+    sp INTEGER,
+    cumhur INTEGER,
+    millet INTEGER
+);
+
+/* Election 4: June 24, 2018 -- General Election - President */
+CREATE TABLE pres_2018 (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    registered INTEGER,
+    voted INTEGER,
+    valid INTEGER,
+    rte INTEGER,
+    ince INTEGER,
+    aksener INTEGER,
+    selo INTEGER,
+    karamolla INTEGER
+);
+
+/* Election 5: April 16, 2017 -- Constitutional Referendum */
+CREATE TABLE ref_2017 (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    registered INTEGER,
+    voted INTEGER,
+    valid INTEGER,
+    yes INTEGER,
+    nop INTEGER
+);
+
+/* Election 6: November 1, 2015 -- General Election */
+CREATE TABLE gen_nov_2015 (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    registered INTEGER,
+    voted INTEGER,
+    valid INTEGER,
+    akp INTEGER,
+    chp INTEGER,
+    mhp INTEGER,
+    hdp INTEGER,
+    sp INTEGER
+);
+
+/* Election 7: June 7, 2015 -- General Election */
+CREATE TABLE gen_jun_2015 (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    registered INTEGER,
+    voted INTEGER,
+    valid INTEGER,
+    akp INTEGER,
+    chp INTEGER,
+    mhp INTEGER,
+    hdp INTEGER,
+    sp INTEGER,
+    gulenist INTEGER
+);
+
+/* Copies the data from csv files into the tables for each corresponding election */
+COPY reelect_2019
+FROM '/Users/ercansen/Desktop/apps/istanbul/2019-06/2019-06.csv' DELIMITER ',' CSV HEADER;
+
+COPY local_2019
+FROM '/Users/ercansen/Desktop/apps/istanbul/2019-03/2019-03.csv' DELIMITER ',' CSV HEADER;
+
+COPY mp_2018
+FROM '/Users/ercansen/Desktop/apps/istanbul/2018-06-MP/2018-06-MP.csv' DELIMITER ',' CSV HEADER;
+
+COPY pres_2018
+FROM '/Users/ercansen/Desktop/apps/istanbul/2018-06-PRES/2018-06-PRES.csv' DELIMITER ',' CSV HEADER;
+
+COPY ref_2017
+FROM '/Users/ercansen/Desktop/apps/istanbul/2017-04/2017-04.csv' DELIMITER ',' CSV HEADER;
+
+COPY gen_nov_2015
+FROM '/Users/ercansen/Desktop/apps/istanbul/2015-11/2015-11.csv' DELIMITER ',' CSV HEADER;
+
+COPY gen_jun_2015
+FROM '/Users/ercansen/Desktop/apps/istanbul/2015-06/2015-06.csv' DELIMITER ',' CSV HEADER;
+
+/* Creates the table districts and assigns a unique id to each district */
+CREATE TABLE districts (
+    id SERIAL,
+    district VARCHAR (50)
+);
+
+INSERT INTO districts (district)
+SELECT DISTINCT (district)
+FROM reelect_2019
+ORDER BY district;
+
+/* Multiplies the serial (id) by 100, so that each unique district id can 'hold' up to 99 sub-parts (neighborhoods), which is more than the maximum in any district (i.e. n01-n99 for n = 1,...,39) */
+UPDATE districts
+SET id = id * 100;
+
+/* Initializes the empty neighborhoods table for to be populated with each district's nbhd.s, nbhd ids */
+CREATE TABLE neighborhoods (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id INTEGER
+);
+
+/* Creates a temp table for each district, generates unique id.s for each nbhd and inserts to neighborhoods table */
+CREATE TABLE adalar (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+/* District 1: Adalar */
+INSERT INTO adalar (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'ADALAR'
+ORDER BY neighborhood;
+
+UPDATE adalar
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = adalar.district;
+
+UPDATE adalar
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM adalar;
+
+DROP TABLE adalar;
+
+/* District 2: Arnavutkoy */
+CREATE TABLE arnavut (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO arnavut (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'ARNAVUTKOY'
+ORDER BY neighborhood;
+
+UPDATE arnavut
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = arnavut.district;
+
+UPDATE arnavut
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM arnavut;
+
+DROP TABLE arnavut;
+
+/* District 3: Atasehir */
+CREATE TABLE atasehir (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO atasehir (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'ATASEHIR'
+ORDER BY neighborhood;
+
+UPDATE atasehir
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = atasehir.district;
+
+UPDATE atasehir
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM atasehir;
+
+DROP TABLE atasehir;
+
+/* District 4: Avcilar */
+CREATE TABLE avcilar (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO avcilar (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'AVCILAR'
+ORDER BY neighborhood;
+
+UPDATE avcilar
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = avcilar.district;
+
+UPDATE avcilar
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM avcilar;
+
+DROP TABLE avcilar;
+
+/* District 5: Bagcilar */
+CREATE TABLE bagcilar (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO bagcilar (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'BAGCILAR'
+ORDER BY neighborhood;
+
+UPDATE bagcilar
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = bagcilar.district;
+
+UPDATE bagcilar
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM bagcilar;
+
+DROP TABLE bagcilar;
+
+/* District 6: Bahcelievler */
+CREATE TABLE bahceli (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO bahceli (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'BAHCELIEVLER'
+ORDER BY neighborhood;
+
+UPDATE bahceli
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = bahceli.district;
+
+UPDATE bahceli
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM bahceli;
+
+DROP TABLE bahceli;
+
+/* District 7: Bakirkoy */
+CREATE TABLE bakir (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO bakir (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'BAKIRKOY'
+ORDER BY neighborhood;
+
+UPDATE bakir
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = bakir.district;
+
+UPDATE bakir
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM bakir;
+
+DROP TABLE bakir;
+
+/* District 8: Basaksehir */
+CREATE TABLE basak (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO basak (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'BASAKSEHIR'
+ORDER BY neighborhood;
+
+UPDATE basak
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = basak.district;
+
+UPDATE basak
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM basak;
+
+DROP TABLE basak;
+
+/* District 9: Bayrampasa */
+CREATE TABLE bayram (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO bayram (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'BAYRAMPASA'
+ORDER BY neighborhood;
+
+UPDATE bayram
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = bayram.district;
+
+UPDATE bayram
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM bayram;
+
+DROP TABLE bayram;
+
+/* District 10: Besiktas */
+CREATE TABLE besiktas (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO besiktas (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'BESIKTAS'
+ORDER BY neighborhood;
+
+UPDATE besiktas
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = besiktas.district;
+
+UPDATE besiktas
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM besiktas;
+
+DROP TABLE besiktas;
+
+/* District 11: Beykoz */
+CREATE TABLE beykoz (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO beykoz (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'BEYKOZ'
+ORDER BY neighborhood;
+
+UPDATE beykoz
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = beykoz.district;
+
+UPDATE beykoz
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM beykoz;
+
+DROP TABLE beykoz;
+
+/* District 12: Beylikduzu */
+CREATE TABLE beylik (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO beylik (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'BEYLIKDUZU'
+ORDER BY neighborhood;
+
+UPDATE beylik
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = beylik.district;
+
+UPDATE beylik
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM beylik;
+
+DROP TABLE beylik;
+
+/* District 13: Beyoglu */
+CREATE TABLE beyoglu (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO beyoglu (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'BEYOGLU'
+ORDER BY neighborhood;
+
+UPDATE beyoglu
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = beyoglu.district;
+
+UPDATE beyoglu
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM beyoglu;
+
+DROP TABLE beyoglu;
+
+/* District 14: Buyukcekmece */
+CREATE TABLE bcek (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO bcek (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'BUYUKCEKMECE'
+ORDER BY neighborhood;
+
+UPDATE bcek
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = bcek.district;
+
+UPDATE bcek
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM bcek;
+
+DROP TABLE bcek;
+
+/* District 15: Catalca */
+CREATE TABLE catalca (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO catalca (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'CATALCA'
+ORDER BY neighborhood;
+
+UPDATE catalca
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = catalca.district;
+
+UPDATE catalca
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM catalca;
+
+DROP TABLE catalca;
+
+/* District 16: Cekmekoy */
+CREATE TABLE cekme (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO cekme (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'CEKMEKOY'
+ORDER BY neighborhood;
+
+UPDATE cekme
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = cekme.district;
+
+UPDATE cekme
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM cekme;
+
+DROP TABLE cekme;
+
+/* District 17: Esenler */
+CREATE TABLE esenler (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO esenler (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'ESENLER'
+ORDER BY neighborhood;
+
+UPDATE esenler
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = esenler.district;
+
+UPDATE esenler
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM esenler;
+
+DROP TABLE esenler;
+
+/* District 18: Esenyurt */
+CREATE TABLE eseny (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO eseny (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'ESENYURT'
+ORDER BY neighborhood;
+
+UPDATE eseny
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = eseny.district;
+
+UPDATE eseny
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM eseny;
+
+DROP TABLE eseny;
+
+/* District 19: Eyupsultan */
+CREATE TABLE eyup (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO eyup (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'EYUPSULTAN'
+ORDER BY neighborhood;
+
+UPDATE eyup
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = eyup.district;
+
+UPDATE eyup
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM eyup;
+
+DROP TABLE eyup;
+
+/* District 20: Fatih */
+CREATE TABLE fatih (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO fatih (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'FATIH'
+ORDER BY neighborhood;
+
+UPDATE fatih
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = fatih.district;
+
+UPDATE fatih
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM fatih;
+
+DROP TABLE fatih;
+
+/* District 21: Gaziosmanpasa */
+CREATE TABLE gop (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO gop (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'GAZIOSMANPASA'
+ORDER BY neighborhood;
+
+UPDATE gop
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = gop.district;
+
+UPDATE gop
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM gop;
+
+DROP TABLE gop;
+
+/* District 22: Gungoren */
+CREATE TABLE gungoren (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO gungoren (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'GUNGOREN'
+ORDER BY neighborhood;
+
+UPDATE gungoren
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = gungoren.district;
+
+UPDATE gungoren
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM gungoren;
+
+DROP TABLE gungoren;
+
+/* District 23: Kadikoy */
+CREATE TABLE kadikoy (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO kadikoy (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'KADIKOY'
+ORDER BY neighborhood;
+
+UPDATE kadikoy
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = kadikoy.district;
+
+UPDATE kadikoy
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM kadikoy;
+
+DROP TABLE kadikoy;
+
+/* District 24: Kagithane */
+CREATE TABLE kagit (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO kagit (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'KAGITHANE'
+ORDER BY neighborhood;
+
+UPDATE kagit
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = kagit.district;
+
+UPDATE kagit
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM kagit;
+
+DROP TABLE kagit;
+
+/* District 25: Kartal */
+CREATE TABLE kartal (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO kartal (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'KARTAL'
+ORDER BY neighborhood;
+
+UPDATE kartal
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = kartal.district;
+
+UPDATE kartal
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM kartal;
+
+DROP TABLE kartal;
+
+/* District 26: Kucukcekmece */
+CREATE TABLE kcek (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO kcek (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'KUCUKCEKMECE'
+ORDER BY neighborhood;
+
+UPDATE kcek
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = kcek.district;
+
+UPDATE kcek
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM kcek;
+
+DROP TABLE kcek;
+
+/* District 27: Maltepe */
+CREATE TABLE maltepe (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO maltepe (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'MALTEPE'
+ORDER BY neighborhood;
+
+UPDATE maltepe
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = maltepe.district;
+
+UPDATE maltepe
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM maltepe;
+
+DROP TABLE maltepe;
+
+/* District 28: Pendik */
+CREATE TABLE pendik (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO pendik (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'PENDIK'
+ORDER BY neighborhood;
+
+UPDATE pendik
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = pendik.district;
+
+UPDATE pendik
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM pendik;
+
+DROP TABLE pendik;
+
+/* District 29: Sancaktepe */
+CREATE TABLE sancak (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO sancak (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'SANCAKTEPE'
+ORDER BY neighborhood;
+
+UPDATE sancak
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = sancak.district;
+
+UPDATE sancak
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM sancak;
+
+DROP TABLE sancak;
+
+/* District 30: Sariyer */
+CREATE TABLE sariyer (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO sariyer (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'SARIYER'
+ORDER BY neighborhood;
+
+UPDATE sariyer
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = sariyer.district;
+
+UPDATE sariyer
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM sariyer;
+
+DROP TABLE sariyer;
+
+/* District 31: Sile */
+CREATE TABLE sile (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO sile (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'SILE'
+ORDER BY neighborhood;
+
+UPDATE sile
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = sile.district;
+
+UPDATE sile
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM sile;
+
+DROP TABLE sile;
+
+/* District 32: Silivri */
+CREATE TABLE silivri (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO silivri (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'SILIVRI'
+ORDER BY neighborhood;
+
+UPDATE silivri
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = silivri.district;
+
+UPDATE silivri
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM silivri;
+
+DROP TABLE silivri;
+
+/* District 33: Sisli */
+CREATE TABLE sisli (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO sisli (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'SISLI'
+ORDER BY neighborhood;
+
+UPDATE sisli
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = sisli.district;
+
+UPDATE sisli
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM sisli;
+
+DROP TABLE sisli;
+
+/* District 34: Sultanbeyli */
+CREATE TABLE sultanb (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO sultanb (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'SULTANBEYLI'
+ORDER BY neighborhood;
+
+UPDATE sultanb
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = sultanb.district;
+
+UPDATE sultanb
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM sultanb;
+
+DROP TABLE sultanb;
+
+/* District 35: Sultangazi */
+CREATE TABLE sultang (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO sultang (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'SULTANGAZI'
+ORDER BY neighborhood;
+
+UPDATE sultang
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = sultang.district;
+
+UPDATE sultang
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM sultang;
+
+DROP TABLE sultang;
+
+/* District 36: Tuzla */
+CREATE TABLE tuzla (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO tuzla (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'TUZLA'
+ORDER BY neighborhood;
+
+UPDATE tuzla
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = tuzla.district;
+
+UPDATE tuzla
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM tuzla;
+
+DROP TABLE tuzla;
+
+CREATE TABLE uskudar (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+/* District 37: Umraniye */
+CREATE TABLE umran (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO umran (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'UMRANIYE'
+ORDER BY neighborhood;
+
+UPDATE umran
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = umran.district;
+
+UPDATE umran
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM umran;
+
+DROP TABLE umran;
+
+/* District 38: Uskudar */
+INSERT INTO uskudar (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'USKUDAR'
+ORDER BY neighborhood;
+
+UPDATE uskudar
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = uskudar.district;
+
+UPDATE uskudar
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM uskudar;
+
+DROP TABLE uskudar;
+
+/* District 39: Zeytinburnu */
+CREATE TABLE zeytin (
+    district VARCHAR (50),
+    neighborhood VARCHAR (100),
+    dist_id INTEGER,
+    nbhd_id SERIAL
+);
+
+INSERT INTO zeytin (neighborhood, district)
+SELECT DISTINCT (neighborhood), district
+FROM reelect_2019
+WHERE district = 'ZEYTINBURNU'
+ORDER BY neighborhood;
+
+UPDATE zeytin
+SET dist_id = districts.id
+FROM districts
+WHERE districts.district = zeytin.district;
+
+UPDATE zeytin
+SET nbhd_id = nbhd_id + dist_id;
+
+INSERT INTO neighborhoods
+SELECT *
+FROM zeytin;
+
+DROP TABLE zeytin;
+
+/* Gets rid of the prison election results, which are reported as separate from the neighborhood-by-neighborhood results */
+DELETE FROM neighborhoods
+WHERE nbhd_id = 705;
+
+UPDATE neighborhoods
+SET nbhd_id = nbhd_id - 1
+WHERE district = 'BAKIRKOY'
+AND nbhd_id > 705;
+
+DELETE FROM neighborhoods
+WHERE nbhd_id = 1710;
+
+UPDATE neighborhoods
+SET nbhd_id = nbhd_id - 1
+WHERE district = 'ESENLER'
+AND nbhd_id > 1710;
+
+DELETE FROM neighborhoods
+WHERE nbhd_id > 2716
+AND nbhd_id < 2720;
+
+UPDATE neighborhoods
+SET nbhd_id = nbhd_id - 3
+WHERE district = 'MALTEPE'
+AND nbhd_id > 2716;
+
+DELETE FROM neighborhoods
+WHERE nbhd_id = 2820;
+
+UPDATE neighborhoods
+SET nbhd_id = nbhd_id - 1
+WHERE district = 'PENDIK'
+AND nbhd_id > 2820;
+
+DELETE FROM neighborhoods
+WHERE nbhd_id > 3233
+AND nbhd_id < 3244;
+
+UPDATE neighborhoods
+SET nbhd_id = nbhd_id - 10
+WHERE district = 'SILIVRI'
+AND nbhd_id > 3233;
+
+DELETE FROM neighborhoods
+WHERE nbhd_id = 3735
+OR nbhd_id = 3736;
+
+UPDATE neighborhoods
+SET nbhd_id = nbhd_id - 2
+WHERE district = 'UMRANIYE'
+AND nbhd_id > 3734;
+
+DELETE FROM neighborhoods
+WHERE nbhd_id = 3826;
+
+UPDATE neighborhoods
+SET nbhd_id = nbhd_id - 1
+WHERE district = 'USKUDAR'
+AND nbhd_id > 3825;
+
+/* Creates each election result table with the unique nbhd id.s joined and results aggregated by neighborhood */
+/* Inserts additional columns for turnout %, party and alliance %, and other extracted features */
+/* Additional Features refer to those other than % turnout, % valid votes and vote share % of each competing party/option */
+
+/* ELECTION 1: June 2015 General */
+/* Additional Features: hdp_r (HDP's vote among registered voters), akp_r (similar) */
+CREATE TABLE gen_jun_15 AS
+SELECT MAX(nbhd_id) AS nbhd_id, g.district, g.neighborhood, SUM(registered) AS registered, SUM(voted) AS voted, SUM(valid) AS valid, SUM(akp) AS akp, SUM(chp) AS chp, SUM(mhp) AS mhp, SUM(hdp) AS hdp, SUM(sp) AS sp, SUM(gulenist) AS gulenist
+FROM gen_jun_2015 g
+LEFT JOIN neighborhoods n
+ON n.neighborhood = g.neighborhood
+AND n.district = g.district
+GROUP BY g.district, g.neighborhood
+ORDER BY nbhd_id;
+
+DELETE FROM gen_jun_15
+WHERE nbhd_id IS NULL;
+
+ALTER TABLE gen_jun_15
+ADD COLUMN turnout DECIMAL(5,2),
+ADD COLUMN valid_p DECIMAL(5,2),
+ADD COLUMN akp_p DECIMAL(5,2),
+ADD COLUMN chp_p DECIMAL(5,2),
+ADD COLUMN mhp_p DECIMAL(5,2),
+ADD COLUMN hdp_p DECIMAL(5,2),
+ADD COLUMN sp_p DECIMAL(5,2),
+ADD COLUMN gulenist_p DECIMAL(5,2),
+ADD COLUMN hdp_r DECIMAL(5,2),
+ADD COLUMN akp_r DECIMAL(5,2);
+
+UPDATE gen_jun_15
+SET turnout = voted * 1.0 / registered * 100.0,
+    valid_p = valid * 1.0 / voted * 100.0,
+    akp_p = akp * 1.0 / valid * 100.0,
+    chp_p = chp * 1.0 / valid * 100.0,
+    mhp_p = mhp * 1.0 / valid * 100.0,
+    hdp_p = hdp * 1.0 / valid * 100.0,
+    sp_p = sp * 1.0 / valid * 100.0,
+    gulenist_p = gulenist * 1.0 / valid * 100.0,
+    hdp_r = hdp * 1.0 / registered * 100.0,
+    akp_r = akp * 1.0 / registered * 100.0;
+
+DELETE FROM gen_jun_15
+WHERE nbhd_id IS NULL;
+
+
+/* ELECTION 2: November 2015 General */
+/* Additional Features: hdp_r, akp_r, hdp_dif (Difference of hdp_r between Jun-Nov elections), akp_dif (similar) */
+CREATE TABLE gen_nov_15 AS
+SELECT MAX(n.nbhd_id) AS nbhd_id, g.district, g.neighborhood, SUM(g.registered) AS registered, SUM(g.voted) AS voted, SUM(g.valid) AS valid, SUM(g.akp) AS akp, SUM(g.chp) AS chp, SUM(g.mhp) AS mhp, SUM(g.hdp) AS hdp, SUM(g.sp) AS sp, MAX(p.akp_r) AS jun_akp_r, MAX(p.hdp_r) AS jun_hdp_r
+FROM gen_nov_2015 g
+LEFT JOIN neighborhoods n
+ON n.neighborhood = g.neighborhood
+AND n.district = g.district
+LEFT JOIN gen_jun_15 p
+ON p.neighborhood = g.neighborhood
+AND p.district = g.district
+GROUP BY g.district, g.neighborhood
+ORDER BY nbhd_id;
+
+DELETE FROM gen_nov_15
+WHERE nbhd_id IS NULL;
+
+ALTER TABLE gen_nov_15
+ADD COLUMN akp_r DECIMAL(5,2),
+ADD COLUMN hdp_r DECIMAL(5,2),
+ADD COLUMN akp_dif DECIMAL(5,2),
+ADD COLUMN hdp_dif DECIMAL(5,2),
+ADD COLUMN turnout DECIMAL(5,2),
+ADD COLUMN valid_p DECIMAL(5,2),
+ADD COLUMN akp_p DECIMAL(5,2),
+ADD COLUMN chp_p DECIMAL(5,2),
+ADD COLUMN mhp_p DECIMAL(5,2),
+ADD COLUMN hdp_p DECIMAL(5,2),
+ADD COLUMN sp_p DECIMAL(5,2),
+ADD COLUMN hdp_dif_per_vote DECIMAL(5,2),
+ADD COLUMN akp_dif_per_vote DECIMAL(5,2);
+
+UPDATE gen_nov_15
+SET turnout = voted * 1.0 / registered * 100.0,
+    valid_p = valid * 1.0 / voted * 100.0,
+    akp_p = akp * 1.0 / valid * 100.0,
+    chp_p = chp * 1.0 / valid * 100.0,
+    mhp_p = mhp * 1.0 / valid * 100.0,
+    hdp_p = hdp * 1.0 / valid * 100.0,
+    sp_p = sp * 1.0 / valid * 100.0,
+    hdp_r = hdp * 1.0 / registered * 100.0,
+    akp_r = akp * 1.0 / registered * 100.0;
+
+UPDATE gen_nov_15  
+SET hdp_dif = hdp_r - jun_hdp_r,
+    akp_dif = akp_r - jun_akp_r,
+    hdp_dif_per_vote = (hdp_r - jun_hdp_r) / NULLIF(jun_hdp_r, 0),
+    akp_dif_per_vote = (akp_r - jun_akp_r) / NULLIF(jun_akp_r, 0);
+
+ALTER TABLE gen_nov_15
+ADD COLUMN akp_dif_per_vote DECIMAL(5,2);
+
+UPDATE gen_nov_15
+SET akp_dif_per_vote = (akp_r - jun_akp_r) / NULLIF(jun_akp_r, 0);
+
+
+/* ELECTION 3: 2017 Referendum */
+/* Additional Features: yes_no (Yes:No) */
+CREATE TABLE ref_17 AS
+SELECT MAX(nbhd_id) AS nbhd_id, r.district, r.neighborhood, SUM(registered) AS registered, SUM(voted) AS voted, SUM(valid) AS valid, SUM(yes) AS yes, SUM(nop) AS nop
+FROM ref_2017 r
+LEFT JOIN neighborhoods n
+ON n.neighborhood = r.neighborhood
+AND n.district = r.district
+GROUP BY r.district, r.neighborhood
+ORDER BY nbhd_id;
+
+DELETE FROM ref_17
+WHERE nbhd_id IS NULL;
+
+ALTER TABLE ref_17
+ADD COLUMN turnout DECIMAL(6,2),
+ADD COLUMN valid_p DECIMAL(6,2),
+ADD COLUMN yes_p DECIMAL(6,2),
+ADD COLUMN nop_p DECIMAL(6,2),
+ADD COLUMN yes_r DECIMAL(6,2),
+ADD COLUMN nop_r DECIMAL(6,2),
+ADD COLUMN yes_no DECIMAL(6,2);
+
+UPDATE ref_17
+SET turnout = voted * 1.0 / registered * 100.0,
+    valid_p = valid * 1.0 / voted * 100.0,
+    yes_p = yes * 1.0 / valid * 100.0,
+    nop_p = nop * 1.0 / valid * 100.0,
+    yes_r = yes * 1.0 / registered * 100.0,
+    nop_r = nop * 1.0 / registered * 100.0,
+    yes_no = yes * 1.0 / nop;
+
+
+/* ELECTION 4: 2018 MP */
+/* Additional Features: */
+CREATE TABLE mp_18 AS
+SELECT MAX(nbhd_id) AS nbhd_id, m.district, m.neighborhood, SUM(registered) AS registered, SUM(voted) AS voted, SUM(valid) AS valid, SUM(akp) AS akp, SUM(chp) AS chp, SUM(mhp) AS mhp, SUM(iyip) AS iyip, SUM(hdp) AS hdp, SUM(sp) AS sp, SUM(cumhur) AS cumhur, SUM(millet) AS millet
+FROM mp_2018 m
+LEFT JOIN neighborhoods n
+ON n.neighborhood = m.neighborhood
+AND n.district = m.district
+GROUP BY m.district, m.neighborhood
+ORDER BY nbhd_id;
+
+DELETE FROM mp_18
+WHERE nbhd_id IS NULL;
+
+ALTER TABLE mp_18
+ADD COLUMN turnout DECIMAL(6,2),
+ADD COLUMN valid_p DECIMAL(5,2),
+ADD COLUMN akp_p DECIMAL(5,2),
+ADD COLUMN chp_p DECIMAL(5,2),
+ADD COLUMN mhp_p DECIMAL(5,2),
+ADD COLUMN iyip_p DECIMAL(5,2),
+ADD COLUMN hdp_p DECIMAL(5,2),
+ADD COLUMN sp_p DECIMAL(5,2),
+ADD COLUMN cumhur_p DECIMAL(5,2),
+ADD COLUMN millet_p DECIMAL(5,2),
+ADD COLUMN millet_off INTEGER,
+ADD COLUMN millet_off_p DECIMAL(5,2),
+ADD COLUMN millet_off_r DECIMAL(5,2),
+ADD COLUMN millet_hdp_nosp INTEGER,
+ADD COLUMN millet_hdp_nosp_p DECIMAL(5,2),
+ADD COLUMN millet_hdp_nosp_r DECIMAL(5,2),
+ADD COLUMN millet_hdp_sp30 INTEGER,
+ADD COLUMN millet_hdp_sp30_p DECIMAL(5,2),
+ADD COLUMN millet_hdp_sp30_r DECIMAL(5,2),
+ADD COLUMN millet_hdp_sp40 INTEGER,
+ADD COLUMN millet_hdp_sp40_p DECIMAL(5,2),
+ADD COLUMN millet_hdp_sp40_r DECIMAL(5,2),
+ADD COLUMN cumhur_tot INTEGER,
+ADD COLUMN cumhur_tot_p DECIMAL(5,2),
+ADD COLUMN cumhur_tot_r DECIMAL(5,2),
+ADD COLUMN cumhur_sp50 INTEGER,
+ADD COLUMN cumhur_sp50_p DECIMAL(5,2),
+ADD COLUMN cumhur_sp50_r DECIMAL(5,2),
+ADD COLUMN cumhur_sp55 INTEGER,
+ADD COLUMN cumhur_sp55_p DECIMAL(5,2),
+ADD COLUMN cumhur_sp55_r DECIMAL(5,2),
+ADD COLUMN mhp_iyip DECIMAL(5,2),
+ADD COLUMN cum_mil_nosp DECIMAL(5,2),
+ADD COLUMN cum_mil_low DECIMAL(5,2),
+ADD COLUMN cum_mil_hi DECIMAL(5,2);
+
+UPDATE mp_18
+SET turnout = voted * 1.0 / registered * 100,
+    valid_p = valid * 1.0 / voted * 100,
+    akp_p = akp * 1.0 / valid * 100,
+    chp_p = chp * 1.0 / valid * 100,
+    mhp_p = mhp * 1.0 / valid * 100,
+    iyip_p = iyip * 1.0 / valid * 100,
+    hdp_p = hdp * 1.0 / valid * 100,
+    sp_p = sp * 1.0 / valid * 100,
+    cumhur_p = cumhur * 1.0 / valid * 100,
+    millet_p = millet * 1.0 / valid * 100,
+    millet_off = chp + iyip + sp + millet,
+    millet_hdp_nosp = chp + iyip + millet + hdp,
+    millet_hdp_sp30 = chp + iyip + millet + hdp + (sp * 3 / 10),
+    millet_hdp_sp40 = chp + iyip + millet + hdp + (sp * 4 / 10),
+    cumhur_tot = akp + mhp + cumhur,
+    cumhur_sp50 = akp + mhp + cumhur + (sp * 5 / 10),
+    cumhur_sp55 = akp + mhp + cumhur + (sp * 55 / 100),
+    mhp_iyip = mhp * 1.0 / NULLIF(iyip, 0);
+
+UPDATE mp_18
+SET millet_off_p = millet_off * 1.0 / valid * 100,
+    millet_off_r = millet_off * 1.0 / registered * 100,
+    millet_hdp_nosp_p = millet_hdp_nosp * 1.0 / valid * 100,
+    millet_hdp_nosp_r = millet_hdp_nosp * 1.0 / registered * 100,
+    millet_hdp_sp30_p = millet_hdp_sp30 * 1.0 / valid * 100,
+    millet_hdp_sp30_r = millet_hdp_sp30 * 1.0 / registered * 100,
+    millet_hdp_sp40_p = millet_hdp_sp40 * 1.0 / valid * 100,
+    millet_hdp_sp40_r = millet_hdp_sp40 * 1.0 / registered * 100,
+    cumhur_tot_p = cumhur_tot * 1.0 / valid * 100,
+    cumhur_tot_r = cumhur_tot * 1.0 / registered * 100,
+    cumhur_sp50_p = cumhur_sp50 * 1.0 / valid * 100,
+    cumhur_sp50_r = cumhur_sp50 * 1.0 / registered * 100,
+    cumhur_sp55_p = cumhur_sp55 * 1.0 / valid * 100,
+    cumhur_sp55_r = cumhur_sp55 * 1.0 / registered * 100,
+    cum_mil_nosp = cumhur_tot * 1.0 / millet_hdp_nosp,
+    cum_mil_low = cumhur_sp50 * 1.0 / millet_hdp_sp30,
+    cum_mil_hi = cumhur_sp55 * 1.0 / millet_hdp_sp40; 
+
+
+/* ELECTION 5: 2018 Presidential */
+/* Additional Features: */
+CREATE TABLE pres_18 AS
+SELECT MAX(n.nbhd_id) AS nbhd_id, p.district, p.neighborhood, SUM(p.registered) AS registered, SUM(p.voted) AS voted, SUM(p.valid) AS valid, SUM(p.rte) AS rte, SUM(p.ince) AS ince, SUM(p.aksener) AS aksener, SUM(p.selo) AS selo, SUM(p.karamolla) AS karamolla, MAX(m.cumhur_tot) AS cumhur_tot_mp
+FROM pres_2018 p
+LEFT JOIN neighborhoods n
+ON n.neighborhood = p.neighborhood
+AND n.district = p.district
+LEFT JOIN mp_18 m
+ON m.neighborhood = p.neighborhood
+AND m.district = p.district
+GROUP BY p.district, p.neighborhood
+ORDER BY nbhd_id;
+
+DELETE FROM pres_18
+WHERE nbhd_id IS NULL;
+
+ALTER TABLE pres_18
+ADD COLUMN turnout DECIMAL(6,2),
+ADD COLUMN valid_p DECIMAL(5,2),
+ADD COLUMN rte_p DECIMAL(5,2),
+ADD COLUMN ince_p DECIMAL(5,2),
+ADD COLUMN aksener_p DECIMAL(5,2),
+ADD COLUMN selo_p DECIMAL(5,2),
+ADD COLUMN karamolla_p DECIMAL(5,2),
+ADD COLUMN rte_r DECIMAL(5,2),
+ADD COLUMN ince_r DECIMAL(5,2),
+ADD COLUMN aksener_r DECIMAL(5,2),
+ADD COLUMN selo_r DECIMAL(5,2),
+ADD COLUMN karamolla_r DECIMAL(5,2),
+ADD COLUMN millet_off INTEGER,
+ADD COLUMN millet_off_p DECIMAL(5,2),
+ADD COLUMN millet_off_r DECIMAL(5,2),
+ADD COLUMN millet_hdp_nosp INTEGER,
+ADD COLUMN millet_hdp_nosp_p DECIMAL(5,2),
+ADD COLUMN millet_hdp_nosp_r DECIMAL(5,2),
+ADD COLUMN millet_hdp_sp30 INTEGER,
+ADD COLUMN millet_hdp_sp30_p DECIMAL(5,2),
+ADD COLUMN millet_hdp_sp30_r DECIMAL(5,2),
+ADD COLUMN millet_hdp_sp40 INTEGER,
+ADD COLUMN millet_hdp_sp40_p DECIMAL(5,2),
+ADD COLUMN millet_hdp_sp40_r DECIMAL(5,2),
+ADD COLUMN cumhur_sp50 INTEGER,
+ADD COLUMN cumhur_sp50_p DECIMAL(5,2),
+ADD COLUMN cumhur_sp50_r DECIMAL(5,2),
+ADD COLUMN cumhur_sp55 INTEGER,
+ADD COLUMN cumhur_sp55_p DECIMAL(5,2),
+ADD COLUMN cumhur_sp55_r DECIMAL(5,2),
+ADD COLUMN cum_mil_nosp DECIMAL(5,2),
+ADD COLUMN cum_mil_low DECIMAL(5,2),
+ADD COLUMN cum_mil_hi DECIMAL(5,2),
+ADD COLUMN rte_change INTEGER,
+ADD COLUMN rte_change_cum DECIMAL(7,3),
+ADD COLUMN rte_change_reg DECIMAL(7,3);
+
+UPDATE pres_18
+SET turnout = voted * 1.0 / registered * 100,
+    valid_p = valid * 1.0 / voted * 100,
+    rte_p = rte * 1.0 / valid * 100,
+    ince_p = ince * 1.0 / valid * 100,
+    aksener_p = aksener * 1.0 / valid * 100,
+    selo_p = selo * 1.0 / valid * 100,
+    karamolla_p = karamolla * 1.0 / valid * 100,
+    rte_r = rte * 1.0 / registered * 100,
+    ince_r = ince * 1.0 / registered * 100,
+    aksener_r = aksener * 1.0 / registered * 100,
+    selo_r = selo * 1.0 / registered * 100,
+    karamolla_r = karamolla * 1.0 / registered * 100,
+    millet_off = ince + aksener + karamolla,
+    millet_hdp_nosp = ince + aksener + selo,
+    millet_hdp_sp30 = ince + aksener + selo + (karamolla * 3 / 10),
+    millet_hdp_sp40 = ince + aksener + selo + (karamolla * 4 / 10),
+    cumhur_sp50 = rte + (karamolla * 1 / 2),
+    cumhur_sp55 = rte + (karamolla * 55 / 100),
+    rte_change = rte - cumhur_tot_mp;
+
+UPDATE pres_18
+SET millet_off_p = millet_off * 1.0 / valid * 100,
+    millet_off_r = millet_off * 1.0 / registered * 100,
+    millet_hdp_nosp_p = millet_hdp_nosp * 1.0 / valid * 100,
+    millet_hdp_nosp_r = millet_hdp_nosp * 1.0 / registered * 100,
+    millet_hdp_sp30_p = millet_hdp_sp30 * 1.0 / valid * 100,
+    millet_hdp_sp30_r = millet_hdp_sp30 * 1.0 / registered * 100,
+    millet_hdp_sp40_p = millet_hdp_sp40 * 1.0 / valid * 100,
+    millet_hdp_sp40_r = millet_hdp_sp40 * 1.0 / registered * 100,
+    cumhur_sp50_p = cumhur_sp50 * 1.0 / valid * 100,
+    cumhur_sp50_r = cumhur_sp50 * 1.0 / registered * 100,
+    cumhur_sp55_p = cumhur_sp55 * 1.0 / valid * 100,
+    cumhur_sp55_r = cumhur_sp55 * 1.0 / registered * 100,
+    cum_mil_nosp = rte * 1.0 / millet_hdp_nosp,
+    cum_mil_low = cumhur_sp50 * 1.0 / millet_hdp_sp30,
+    cum_mil_hi = cumhur_sp55 * 1.0 / millet_hdp_sp40,
+    rte_change_cum = rte_change * 1.0 / cumhur_tot_mp * 100,
+    rte_change_reg = rte_change * 1.0 / registered * 100;
+    
+
+/* ELECTION 6: 2019 Local (cancelled) */
+CREATE TABLE local_19 AS
+SELECT MAX(nbhd_id) AS nbhd_id, l.district, l.neighborhood, SUM(registered) AS registered, SUM(voted) AS voted, SUM(valid) AS valid, SUM(akp) AS akp, SUM(chp) AS chp, SUM(sp) AS sp
+FROM local_2019 l
+LEFT JOIN neighborhoods n
+ON n.neighborhood = l.neighborhood
+AND n.district = l.district
+GROUP BY l.district, l.neighborhood
+ORDER BY nbhd_id;
+
+DELETE FROM local_19
+WHERE nbhd_id IS NULL;
+
+UPDATE local_19
+SET registered = registered + (SELECT SUM(registered) FROM local_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736),
+    voted = voted + (SELECT SUM(voted) FROM local_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736),
+    valid = valid + (SELECT SUM(valid) FROM local_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736),
+    akp = akp + (SELECT SUM(akp) FROM local_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736),
+    chp = chp + (SELECT SUM(chp) FROM local_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736),
+    sp = sp + (SELECT SUM(sp) FROM local_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736)
+WHERE nbhd_id = 3730;
+
+DELETE FROM local_19
+WHERE nbhd_id = 3716
+OR nbhd_id = 3736;
+
+ALTER TABLE local_19
+ADD COLUMN turnout DECIMAL(6,2),
+ADD COLUMN valid_p DECIMAL(5,2),
+ADD COLUMN akp_p DECIMAL(5,2),
+ADD COLUMN chp_p DECIMAL(5,2),
+ADD COLUMN sp_p DECIMAL(5,2),
+ADD COLUMN chp_sp INTEGER,
+ADD COLUMN chp_sp_p DECIMAL(5,2),
+ADD COLUMN chp_sp_r DECIMAL(5,2),
+ADD COLUMN chp_sp30 INTEGER,
+ADD COLUMN chp_sp30_p DECIMAL(5,2),
+ADD COLUMN chp_sp30_r DECIMAL(5,2),
+ADD COLUMN chp_sp40 INTEGER,
+ADD COLUMN chp_sp40_p DECIMAL(5,2),
+ADD COLUMN chp_sp40_r DECIMAL(5,2),
+ADD COLUMN akp_sp50 INTEGER,
+ADD COLUMN akp_sp50_p DECIMAL(5,2),
+ADD COLUMN akp_sp50_r DECIMAL(5,2),
+ADD COLUMN akp_sp55 INTEGER,
+ADD COLUMN akp_sp55_p DECIMAL(5,2),
+ADD COLUMN akp_sp55_r DECIMAL(5,2),
+ADD COLUMN cum_mil_nosp DECIMAL(5,2),
+ADD COLUMN cum_mil_low DECIMAL(5,2),
+ADD COLUMN cum_mil_hi DECIMAL(5,2);
+
+UPDATE local_19
+SET turnout = voted * 1.0 / registered * 100,
+    valid_p = valid * 1.0 / voted * 100,
+    akp_p = akp * 1.0 / valid * 100,
+    chp_p = chp * 1.0 / valid * 100,
+    sp_p = sp * 1.0 / valid * 100,
+    chp_sp = chp + sp,
+    chp_sp30 = chp + (sp * 3 / 10),
+    chp_sp40 = chp + (sp * 4 / 10),
+    akp_sp50 = akp + (sp * 1 / 2),
+    akp_sp55 = akp + (sp * 55 / 100);
+
+UPDATE local_19
+SET chp_sp_p = chp_sp * 1.0 / valid * 100,
+    chp_sp_r = chp_sp * 1.0 / registered * 100,
+    chp_sp30_p = chp_sp30 * 1.0 / valid * 100,
+    chp_sp30_r = chp_sp30 * 1.0 / registered * 100,
+    chp_sp40_p = chp_sp40 * 1.0 / valid * 100,
+    chp_sp40_r = chp_sp40 * 1.0 / registered * 100,
+    akp_sp50_p = akp_sp50 * 1.0 / valid * 100,
+    akp_sp50_r = akp_sp50 * 1.0 / registered * 100,
+    akp_sp55_p = akp_sp55 * 1.0 / valid * 100,
+    akp_sp55_r = akp_sp55 * 1.0 / registered * 100,
+    cum_mil_nosp = akp * 1.0 / chp,
+    cum_mil_low = akp_sp50 * 1.0 / chp_sp30,
+    cum_mil_hi = akp_sp55 * 1.0 / chp_sp40; 
+
+SELECT * FROM reelect_19;
+
+/* ELECTION 7: 2019 Mayoral Rerun */
+CREATE TABLE reelect_19 AS
+SELECT MAX(n.nbhd_id) AS nbhd_id, r.district, r.neighborhood, SUM(r.registered) AS registered, SUM(r.voted) AS voted, SUM(r.valid) AS valid, SUM(r.akp) AS akp, SUM(r.chp) AS chp, SUM(r.sp) AS sp, MAX(l.voted) AS voted_march, MAX(l.akp) AS akp_march, MAX(l.chp) AS chp_march
+FROM reelect_2019 r
+LEFT JOIN neighborhoods n
+ON n.neighborhood = r.neighborhood
+AND n.district = r.district
+LEFT JOIN local_19 l
+ON l.neighborhood = r.neighborhood
+AND l.district = r.district
+GROUP BY r.district, r.neighborhood
+ORDER BY nbhd_id;
+
+DELETE FROM reelect_19
+WHERE nbhd_id IS NULL;
+
+UPDATE reelect_19
+SET registered = registered + (SELECT SUM(registered) FROM local_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736),
+    voted = voted + (SELECT SUM(voted) FROM local_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736),
+    valid = valid + (SELECT SUM(valid) FROM local_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736),
+    akp = akp + (SELECT SUM(akp) FROM local_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736),
+    chp = chp + (SELECT SUM(chp) FROM local_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736),
+    sp = sp + (SELECT SUM(sp) FROM local_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736)
+WHERE nbhd_id = 3730;
+
+DELETE FROM reelect_19
+WHERE nbhd_id = 3716
+OR nbhd_id = 3736;
+
+ALTER TABLE local_19
+ADD COLUMN turnout DECIMAL(6,2),
+ADD COLUMN valid_p DECIMAL(5,2),
+ADD COLUMN akp_p DECIMAL(5,2),
+ADD COLUMN chp_p DECIMAL(5,2),
+ADD COLUMN sp_p DECIMAL(5,2),
+ADD COLUMN chp_sp INTEGER,
+ADD COLUMN chp_sp_p DECIMAL(5,2),
+ADD COLUMN chp_sp_r DECIMAL(5,2),
+ADD COLUMN chp_sp30 INTEGER,
+ADD COLUMN chp_sp30_p DECIMAL(5,2),
+ADD COLUMN chp_sp30_r DECIMAL(5,2),
+ADD COLUMN chp_sp40 INTEGER,
+ADD COLUMN chp_sp40_p DECIMAL(5,2),
+ADD COLUMN chp_sp40_r DECIMAL(5,2),
+ADD COLUMN akp_sp50 INTEGER,
+ADD COLUMN akp_sp50_p DECIMAL(5,2),
+ADD COLUMN akp_sp50_r DECIMAL(5,2),
+ADD COLUMN akp_sp55 INTEGER,
+ADD COLUMN akp_sp55_p DECIMAL(5,2),
+ADD COLUMN akp_sp55_r DECIMAL(5,2),
+ADD COLUMN cum_mil_nosp DECIMAL(5,2),
+ADD COLUMN cum_mil_low DECIMAL(5,2),
+ADD COLUMN cum_mil_hi DECIMAL(5,2);
+
+UPDATE local_19
+SET turnout = voted * 1.0 / registered * 100,
+    valid_p = valid * 1.0 / voted * 100,
+    akp_p = akp * 1.0 / valid * 100,
+    chp_p = chp * 1.0 / valid * 100,
+    sp_p = sp * 1.0 / valid * 100,
+    chp_sp = chp + sp,
+    chp_sp30 = chp + (sp * 3 / 10),
+    chp_sp40 = chp + (sp * 4 / 10),
+    akp_sp50 = akp + (sp * 1 / 2),
+    akp_sp55 = akp + (sp * 55 / 100);
+
+UPDATE local_19
+SET chp_sp_p = chp_sp * 1.0 / valid * 100,
+    chp_sp_r = chp_sp * 1.0 / registered * 100,
+    chp_sp30_p = chp_sp30 * 1.0 / valid * 100,
+    chp_sp30_r = chp_sp30 * 1.0 / registered * 100,
+    chp_sp40_p = chp_sp40 * 1.0 / valid * 100,
+    chp_sp40_r = chp_sp40 * 1.0 / registered * 100,
+    akp_sp50_p = akp_sp50 * 1.0 / valid * 100,
+    akp_sp50_r = akp_sp50 * 1.0 / registered * 100,
+    akp_sp55_p = akp_sp55 * 1.0 / valid * 100,
+    akp_sp55_r = akp_sp55 * 1.0 / registered * 100,
+    cum_mil_nosp = akp * 1.0 / chp,
+    cum_mil_low = akp_sp50 * 1.0 / chp_sp30,
+    cum_mil_hi = akp_sp55 * 1.0 / chp_sp40; 
