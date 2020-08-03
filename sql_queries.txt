@@ -1,7 +1,3 @@
-/* By: Ercan Sen */
-/* Purpose: Takes in csv files that are organized by ballot box and creates aggregated (by neighborhood) and feature-engineered tables */
-
-
 /* Creates a new table for each election. Note that the column names differ since not all parties/options appeared every time */
 
 /* Election 1: June 23, 2019 -- Mayoral Election Rerun */
@@ -1697,7 +1693,6 @@ SET chp_sp_p = chp_sp * 1.0 / valid * 100,
     cum_mil_low = akp_sp50 * 1.0 / chp_sp30,
     cum_mil_hi = akp_sp55 * 1.0 / chp_sp40; 
 
-SELECT * FROM reelect_19;
 
 /* ELECTION 7: 2019 Mayoral Rerun */
 CREATE TABLE reelect_19 AS
@@ -1716,19 +1711,19 @@ DELETE FROM reelect_19
 WHERE nbhd_id IS NULL;
 
 UPDATE reelect_19
-SET registered = registered + (SELECT SUM(registered) FROM local_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736),
-    voted = voted + (SELECT SUM(voted) FROM local_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736),
-    valid = valid + (SELECT SUM(valid) FROM local_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736),
-    akp = akp + (SELECT SUM(akp) FROM local_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736),
-    chp = chp + (SELECT SUM(chp) FROM local_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736),
-    sp = sp + (SELECT SUM(sp) FROM local_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736)
+SET registered = registered + (SELECT SUM(registered) FROM reelect_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736),
+    voted = voted + (SELECT SUM(voted) FROM reelect_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736),
+    valid = valid + (SELECT SUM(valid) FROM reelect_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736),
+    akp = akp + (SELECT SUM(akp) FROM reelect_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736),
+    chp = chp + (SELECT SUM(chp) FROM reelect_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736),
+    sp = sp + (SELECT SUM(sp) FROM reelect_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736)
 WHERE nbhd_id = 3730;
 
 DELETE FROM reelect_19
 WHERE nbhd_id = 3716
 OR nbhd_id = 3736;
 
-ALTER TABLE local_19
+ALTER TABLE reelect_19
 ADD COLUMN turnout DECIMAL(6,2),
 ADD COLUMN valid_p DECIMAL(5,2),
 ADD COLUMN akp_p DECIMAL(5,2),
@@ -1751,9 +1746,16 @@ ADD COLUMN akp_sp55_p DECIMAL(5,2),
 ADD COLUMN akp_sp55_r DECIMAL(5,2),
 ADD COLUMN cum_mil_nosp DECIMAL(5,2),
 ADD COLUMN cum_mil_low DECIMAL(5,2),
-ADD COLUMN cum_mil_hi DECIMAL(5,2);
+ADD COLUMN cum_mil_hi DECIMAL(5,2),
+ADD COLUMN turnout_dif INTEGER,
+ADD COLUMN akp_dif INTEGER,
+ADD COLUMN chp_dif INTEGER,
+ADD COLUMN turnout_rate_ch DECIMAL(7,3),
+ADD COLUMN akp_rate_ch DECIMAL(5,2),
+ADD COLUMN chp_rate_ch DECIMAL(5,2),
+ADD COLUMN akp_rc_turnout DECIMAL(7,4);
 
-UPDATE local_19
+UPDATE reelect_19
 SET turnout = voted * 1.0 / registered * 100,
     valid_p = valid * 1.0 / voted * 100,
     akp_p = akp * 1.0 / valid * 100,
@@ -1763,9 +1765,12 @@ SET turnout = voted * 1.0 / registered * 100,
     chp_sp30 = chp + (sp * 3 / 10),
     chp_sp40 = chp + (sp * 4 / 10),
     akp_sp50 = akp + (sp * 1 / 2),
-    akp_sp55 = akp + (sp * 55 / 100);
+    akp_sp55 = akp + (sp * 55 / 100),
+    turnout_dif = voted - voted_march,
+    akp_dif = akp - akp_march,
+    chp_dif = chp - chp_march;
 
-UPDATE local_19
+UPDATE reelect_19
 SET chp_sp_p = chp_sp * 1.0 / valid * 100,
     chp_sp_r = chp_sp * 1.0 / registered * 100,
     chp_sp30_p = chp_sp30 * 1.0 / valid * 100,
@@ -1778,4 +1783,18 @@ SET chp_sp_p = chp_sp * 1.0 / valid * 100,
     akp_sp55_r = akp_sp55 * 1.0 / registered * 100,
     cum_mil_nosp = akp * 1.0 / chp,
     cum_mil_low = akp_sp50 * 1.0 / chp_sp30,
-    cum_mil_hi = akp_sp55 * 1.0 / chp_sp40; 
+    cum_mil_hi = akp_sp55 * 1.0 / chp_sp40,
+    turnout_rate_ch = turnout_dif * 1.0 / voted_march,
+    akp_rate_ch = akp_dif * 1.0 / akp_march,
+    chp_rate_ch = chp_dif * 1.0 / chp_march,
+    akp_rc_turnout = akp_dif * 1.0 / akp_march / NULLIF(turnout_dif, 0); 
+
+/* Outputs final tables to csv */
+COPY (SELECT * FROM reelect_19 ORDER BY nbhd_id) TO '/Users/ercansen/Desktop/apps/istanbul/sql outputs/reelect_19.csv' WITH CSV HEADER;
+COPY (SELECT * FROM local_19 ORDER BY nbhd_id) TO '/Users/ercansen/Desktop/apps/istanbul/sql outputs/local_19.csv' WITH CSV HEADER;
+COPY (SELECT * FROM mp_18 ORDER BY nbhd_id) TO '/Users/ercansen/Desktop/apps/istanbul/sql outputs/mp_18.csv' WITH CSV HEADER;
+COPY (SELECT * FROM pres_18 ORDER BY nbhd_id) TO '/Users/ercansen/Desktop/apps/istanbul/sql outputs/pres_18.csv' WITH CSV HEADER;
+COPY (SELECT * FROM ref_17 ORDER BY nbhd_id) TO '/Users/ercansen/Desktop/apps/istanbul/sql outputs/ref_17.csv' WITH CSV HEADER;
+COPY (SELECT * FROM gen_nov_15 ORDER BY nbhd_id) TO '/Users/ercansen/Desktop/apps/istanbul/sql outputs/gen_nov_15.csv' WITH CSV HEADER;
+COPY (SELECT * FROM gen_jun_15 ORDER BY nbhd_id) TO '/Users/ercansen/Desktop/apps/istanbul/sql outputs/gen_jun_15.csv' WITH CSV HEADER;
+COPY (SELECT * FROM neighborhoods ORDER BY nbhd_id) TO '/Users/ercansen/Desktop/apps/istanbul/sql outputs/neighborhoods.csv' WITH CSV HEADER;
