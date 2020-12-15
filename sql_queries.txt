@@ -1,6 +1,91 @@
-/* Creates a new table for each election. Note that the column names differ since not all parties/options appeared every time */
+/*  Project Name: Istanbul 
+    By: Ercan Sen
+    Date: 12-10-2020
+    Does: Aggregates the ballot box data into a neighborhood-wise elections and political features database,
+              using a series of SQL queries */
 
-/* Election 1: June 23, 2019 -- Mayoral Election Rerun */
+
+-- As scraped from the web, the results for the 7 elections in our analysis are in 7 csv files, with each ballot box as a row of the dataset
+-- The column names differ from one election to the other, since participating candidates/parties/proposals change
+-- In this sequence of SQL queries, the purpose is to create a database with tables for districts, neighborhoods, and neighborhood-wise election results (obtained after aggregation)
+
+
+/* STEP 1: Temporary Tables for Ballot Box Data */
+-- Creates the temporary tables with the same columns as the raw csv file for each corresponding election, in order to import the raw (unaggregated) election results
+-- Columns (semantically) and their corresponding data types need to be congruent as the csv file for every election
+-- Common columns that appear every time are district (shorter VARCHAR), neighborhood (longer VARCHAR), registered, voted, valid (all INTEGERs)
+-- Next, copies the data in csv files into the temporary tables
+
+
+/* STEP 2:  districts and neighborhoods Tables */
+
+-- First, creates the districts table, using the unique district names in the most recent (2019-06) election. Assigns unique IDs for each district, multiples of 100, i.e. 100, 200, 300, …
+-- Neighborhood IDs are designed so that they all start with the ID of corresponding district they belong in, and neighborhoods are identified using differing tens and units digits for their IDs
+-- Next, creates the neighborhoods table, using unique district-neighborhood pairs
+-- Assigns the ID values using RANK() OVER PARTITION, with the neighborhoods within each district ordered alphabetically
+
+-- Note that neighborhood is the sub-division of district, and district is the sub-division of the city (Istanbul in our case)
+-- Note that the maximum number of neighborhoods in a district is 62, in the district 'SILE', so my design of the database is an accurate and consistent representation
+-- Note that neighborhood names don't have to be unique between districts, but they are unique within each district, hence we use the unique dist.-nbhd. pairs
+
+
+/* STEP 3:  Aggregating the Data, Migrating to Final Tables, Engineering New Features */
+
+-- Aggregates the data to obtain neighborhood-wise election results
+-- Migrates aggregated data into the final tables in the database
+-- Engineers additional political features that will be utilized for more accurate forecasts and creating clusters based on political parameters
+
+
+
+
+
+/* STEP 1 begins */
+
+/* LEGEND for Columns
+
+Parties: 
+
+    akp - ruling Justice and Development Party, lead by Erdogan, stands for conservatism, Islamism, ideologically right
+    mhp - supports the government bloc, Nationalist Movement Party, right-wing, Turkish nationalism
+    cumhur - formal name of the government bloc, means 'the public, people', in MP elections in 2018-06 voters were able to vote for the whole bloc
+
+    chp - main opposition, Republican People's Party, Istanbul mayor Imamoglu's party, social-democratic but currently an umbrella for the whole opposition
+    iyip - Good Party, split from 'mhp' when they joined government ('cumhur') bloc, center to right-wing
+    sp - Felicity Party, ideologically similar as 'akp' (Islamism, conservatism), yet opposes Erdogan's unquestionable authority and favors parliamentary system, instead of presidential
+    millet - formal name of the opposition bloc, also means 'the nation, people'
+
+    hdp - Peoples' Democratic Party, not formally a member of the 'millet' bloc but sometimes gives support from outside, pro-Kurdish, social-democratic/left-wing
+
+
+Candidates: 
+
+    rte - stands for 'Recep Tayyip Erdogan', president, in power since 2003 (including time as prime minister), changed constitution to increase his presidential authority, created a highly polarized nation
+
+    ince - 'Muharrem Ince', 'chp's candidate for president in 2018-06 election, caused major hype in metropolitan areas and large cities, yet could not keep up as Erdogan secured presidency in first round
+    aksener - 'Meral Aksener', 'iyip's leader and presidential candidate in 2018-06, has appeal to secular and centrist voters
+    karamolla - 'Temel Karamollaoglu', 'sp's leader and presidential candidate
+
+    selo - 'Selahattin Demirtas', 'hdp's former leader, and presidential candidate in both presidential elections in 2018 and 2014, imprisoned since 2016, very popular among Kurds, leftists, young voters
+
+    gulenist - In 2015-06 elections, about a year before the coup d'etat attempt, independent candidates for MP who are supporters of Gulen's Islamist cult ran for election
+    (Disclaimer: The inclusion of these candidates in this analysis is not an endorsement of any kind. Gulen's movement is a terrorist organization who murdered thousands of civilians and threatened Turkey's regime.
+                        They are included, in order to test the government's accusations that prominent opposition figures, or ordinary citizens with opposing ideas, are pro-Gulen, although ironically Gulen and Erdogan used to be allies.)
+
+
+Options:
+
+    yes - a vote of 'yes', i.e. approval, in the 2017 constitutional referendum that proposed the parliamentary regime to tun into presidential, allowing the president immense, unrestricted powers
+    no - a vote of 'no', i.e. rejection, in the 2017 constitutional referendum
+
+*/
+
+
+-- ELECTION 1: June 23, 2019 (Mayoral Election Rerun)
+
+
+-- Creates the temp table, names the columns and chooses the dtypes
+-- Note that neighborhood names tend to be longer, hence the greater VARCHAR length 
+
 CREATE TABLE reelect_2019 (
     district VARCHAR (50),
     neighborhood VARCHAR (100),
@@ -12,7 +97,19 @@ CREATE TABLE reelect_2019 (
     sp INTEGER
 );
 
-/* Election 2: March 31, 2019 -- Local Election */
+-- Copies the data from the raw csv file and inserts the ballot box records into the temporary table
+
+COPY reelect_2019
+FROM '/Users/ercansen/Dropbox/apps/istanbul/2019-06/2019-06.csv' DELIMITER ',' CSV HEADER;
+
+
+
+-- ELECTION 2: March 31, 2019 (Local)
+
+
+-- Creates the temp table, names the columns and chooses the dtypes
+-- Note that neighborhood names tend to be longer, hence the greater VARCHAR length 
+
 CREATE TABLE local_2019 (
     district VARCHAR (50),
     neighborhood VARCHAR (100),
@@ -24,7 +121,19 @@ CREATE TABLE local_2019 (
     sp INTEGER
 );
 
-/* Election 3: June 24, 2018 -- General Election - MPs */
+-- Copies the data from the raw csv file and inserts the ballot box records into the temporary table
+
+COPY local_2019
+FROM '/Users/ercansen/Dropbox/apps/istanbul/2019-03/2019-03.csv' DELIMITER ',' CSV HEADER;
+
+
+
+-- ELECTION 3: June 24, 2018  (General - MP)
+
+
+-- Creates the temp table, names the columns and chooses the dtypes
+-- Note that neighborhood names tend to be longer, hence the greater VARCHAR length 
+
 CREATE TABLE mp_2018 (
     district VARCHAR (50),
     neighborhood VARCHAR (100),
@@ -41,7 +150,19 @@ CREATE TABLE mp_2018 (
     millet INTEGER
 );
 
-/* Election 4: June 24, 2018 -- General Election - President */
+-- Copies the data from the raw csv file and inserts the ballot box records into the temporary table
+
+COPY mp_2018
+FROM '/Users/ercansen/Dropbox/apps/istanbul/2018-06-MP/2018-06-MP.csv' DELIMITER ',' CSV HEADER;
+
+
+
+-- ELECTION 4: June 24, 2018 (General - President)
+
+
+-- Creates the temp table, names the columns and chooses the dtypes
+-- Note that neighborhood names tend to be longer, hence the greater VARCHAR length
+
 CREATE TABLE pres_2018 (
     district VARCHAR (50),
     neighborhood VARCHAR (100),
@@ -55,7 +176,19 @@ CREATE TABLE pres_2018 (
     karamolla INTEGER
 );
 
-/* Election 5: April 16, 2017 -- Constitutional Referendum */
+-- Copies the data from the raw csv file and inserts the ballot box records into the temporary table
+
+COPY pres_2018
+FROM '/Users/ercansen/Dropbox/apps/istanbul/2018-06-PRES/2018-06-PRES.csv' DELIMITER ',' CSV HEADER;
+
+
+
+-- ELECTION 5: April 16, 2017 (Constitutional Referendum)
+
+
+-- Creates the temp table, names the columns and chooses the dtypes
+-- Note that neighborhood names tend to be longer, hence the greater VARCHAR length
+
 CREATE TABLE ref_2017 (
     district VARCHAR (50),
     neighborhood VARCHAR (100),
@@ -66,7 +199,19 @@ CREATE TABLE ref_2017 (
     nop INTEGER
 );
 
-/* Election 6: November 1, 2015 -- General Election */
+-- Copies the data from the raw csv file and inserts the ballot box records into the temporary table
+
+COPY ref_2017
+FROM '/Users/ercansen/Dropbox/apps/istanbul/2017-04/2017-04.csv' DELIMITER ',' CSV HEADER;
+
+
+
+-- ELECTION 6: November 1, 2015 (General - MP)
+
+
+-- Creates the temp table, names the columns and chooses the dtypes
+-- Note that neighborhood names tend to be longer, hence the greater VARCHAR length
+
 CREATE TABLE gen_nov_2015 (
     district VARCHAR (50),
     neighborhood VARCHAR (100),
@@ -80,7 +225,19 @@ CREATE TABLE gen_nov_2015 (
     sp INTEGER
 );
 
-/* Election 7: June 7, 2015 -- General Election */
+-- Copies the data from the raw csv file and inserts the ballot box records into the temporary table
+
+COPY gen_nov_2015
+FROM '/Users/ercansen/Dropbox/apps/istanbul/2015-11/2015-11.csv' DELIMITER ',' CSV HEADER;
+
+
+
+-- ELECTION 7: June 7, 2015 (General - MP)
+
+
+-- Creates the temp table, names the columns and chooses the dtypes
+-- Note that neighborhood names tend to be longer, hence the greater VARCHAR length
+
 CREATE TABLE gen_jun_2015 (
     district VARCHAR (50),
     neighborhood VARCHAR (100),
@@ -95,41 +252,41 @@ CREATE TABLE gen_jun_2015 (
     gulenist INTEGER
 );
 
-/* Copies the data from csv files into the tables for each corresponding election */
-COPY reelect_2019
-FROM '/Users/ercansen/Dropbox/apps/istanbul/2019-06/2019-06.csv' DELIMITER ',' CSV HEADER;
-
-COPY local_2019
-FROM '/Users/ercansen/Dropbox/apps/istanbul/2019-03/2019-03.csv' DELIMITER ',' CSV HEADER;
-
-COPY mp_2018
-FROM '/Users/ercansen/Dropbox/apps/istanbul/2018-06-MP/2018-06-MP.csv' DELIMITER ',' CSV HEADER;
-
-COPY pres_2018
-FROM '/Users/ercansen/Dropbox/apps/istanbul/2018-06-PRES/2018-06-PRES.csv' DELIMITER ',' CSV HEADER;
-
-COPY ref_2017
-FROM '/Users/ercansen/Dropbox/apps/istanbul/2017-04/2017-04.csv' DELIMITER ',' CSV HEADER;
-
-COPY gen_nov_2015
-FROM '/Users/ercansen/Dropbox/apps/istanbul/2015-11/2015-11.csv' DELIMITER ',' CSV HEADER;
+-- Copies the data from the raw csv file and inserts the ballot box records into the temporary table
 
 COPY gen_jun_2015
 FROM '/Users/ercansen/Dropbox/apps/istanbul/2015-06/2015-06.csv' DELIMITER ',' CSV HEADER;
 
 
-/* Creates the table districts and assigns a unique ID to each district */
-/* IDs for districts are multiples of 100, so that the IDs for neighborhoods (i.e. subdivisions) are 'held' within the district ID */
-/* Note: no district has more than 99 neighborhoods. In fact the maximum number is 62 */
+
+/* STEP 1 ends*/
+
+
+
+
+/* STEP 2 begins*/
+
+
+
+-- DISTRICTS
+
+
+-- Creates sequence that starts with minimum value 100, and increments by 100
 
 CREATE SEQUENCE districts_seq
 MINVALUE 100
 INCREMENT 100;
 
+
+-- Creates the table 'districts' with columns for 'id' and 'district' (name)
+
 CREATE TABLE districts (
     id INTEGER PRIMARY KEY DEFAULT NEXTVAL('districts_seq'),
     district VARCHAR (50)
 );
+
+
+-- Inserts the unique districts in the most recent election into the 'districts' table
 
 INSERT INTO districts(district)
 SELECT DISTINCT(district)
@@ -137,42 +294,64 @@ FROM reelect_2019
 ORDER BY district;
 
 
-/* Initializes the neighborhoods table */
+
+-- NEIGHBORHOODS
+
+
+-- Creates the table 'neighborhoods' with columns: 'id', 'dist_id', 'district' and 'neighborhood'
+-- 'dist_id' (ID value of corresponding district) is a foreign key
+-- The relationship between 'neighborhoods' and 'districts' is many-to-one
+
 CREATE TABLE neighborhoods (
+    id INTEGER,
     dist_id INTEGER,
     district VARCHAR (50),
     neighborhood VARCHAR (100),
-    id INTEGER,
-    CONSTRAINT fk_district
+    CONSTRAINT fk_district                              -- adds foreign key constraint 
         FOREIGN KEY(dist_id)
             REFERENCES districts(id)
 );
 
 
+-- Populates the neighborhoods table by inserting records
+-- Joins data from two tables and uses a subquery, to fill in the desired information
+
 INSERT INTO neighborhoods 
-    (dist_id, district, neighborhood, id)
-(SELECT MAX(d.id), 
-        r.district, 
-        r.neighborhood, 
-        RANK () OVER (
-                PARTITION BY MAX(d.id)
-                ORDER BY r.neighborhood
-        ) id
+    (id, dist_id, district, neighborhood)
+(SELECT RANK () OVER (
+                    PARTITION BY MAX(d.id)
+                    ORDER BY r.neighborhood
+                ) id,                                                     -- subquery using RANK OVER PARTITION to obtain neighborhood IDs
+                MAX(d.id),                                          -- MAX is arbitrary, other agg.fnc.s would work too since all d.id values are the same
+                r.district, 
+                r.neighborhood 
 FROM reelect_2019 AS r
     RIGHT JOIN districts AS d
         ON d.district = r.district
-WHERE RIGHT(r.neighborhood, 4) = 'MAH.'
+WHERE RIGHT(r.neighborhood, 4) = 'MAH.'    -- only gets records that end with 'MAH.', abbreviation for the word neighborhood
 GROUP BY r.district, r.neighborhood
 ORDER BY r.district, r.neighborhood);
 
-UPDATE neighborhoods
+
+-- Updates the value of nbhd. id by adding the id itself (rank among district) to district id
+
+UPDATE neighborhoods     
 SET id = id + dist_id;
+
+
+-- Sets the 'id' column of 'neighborhoods' table as the primary key
+-- No error at this step implies that nbhd. IDs are unique, as desired 
 
 ALTER TABLE neighborhoods
 ADD PRIMARY KEY (id);
 
-SELECT *
-FROM neighborhoods;
+
+/* STEP 2 ends*/
+
+
+
+
+/* STEP 3 begins*/
 
 
 /* Creates each election result table with the unique nbhd id.s joined and results aggregated by neighborhood */
@@ -180,22 +359,101 @@ FROM neighborhoods;
 /* Additional Features refer to those other than % turnout, % valid votes and vote share % of each competing party/option */
 
 
-/* LEGEND FOR COLUMN NAMES: */
+-- ELECTION 1: 2019 Mayoral Rerun
 
-/* akp: governing Justice and Development Party, populist */
-/* mhp: government partner, Nationalist Movement Party, right-wing */
-/* chp: main opposition, Republican People's Party, social democratic */
-/* iyip: opposition, Good Party, center */
-/* hdp: opposition, Peoples' Democratic Party, left-wing, Kurdish */
-/* sp: opposition, Felicity Party, Islamist */
-/* NOTE: Since sp and akp lie on similar positions on the ideological scale, sp votes are not directly counted towards opposition bloc */
+CREATE TABLE reelect_19 AS
+SELECT MAX(n.nbhd_id) AS nbhd_id, r.district, r.neighborhood, SUM(r.registered) AS registered, SUM(r.voted) AS voted, SUM(r.valid) AS valid, SUM(r.akp) AS akp, SUM(r.chp) AS chp, SUM(r.sp) AS sp, MAX(l.voted) AS voted_march, MAX(l.akp) AS akp_march, MAX(l.chp) AS chp_march
+FROM reelect_2019 r
+LEFT JOIN neighborhoods n
+ON n.neighborhood = r.neighborhood
+AND n.district = r.district
+LEFT JOIN local_19 l
+ON l.neighborhood = r.neighborhood
+AND l.district = r.district
+GROUP BY r.district, r.neighborhood
+ORDER BY nbhd_id;
 
-/* _p (at the end of column name): Percent of votes, among valid votes casted */
-/* _r : Percent of votes, among total number of registered voters */
+DELETE FROM reelect_19
+WHERE nbhd_id IS NULL;
 
-/* gulenist: In 06/2015 elections, independent candidates for MP ran, who are followers of Gulen. */
-/*           Gulen was later going to be responsible for the failed coup d'etat attempt in 2016 */
+UPDATE reelect_19
+SET registered = registered + (SELECT SUM(registered) FROM reelect_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736),
+    voted = voted + (SELECT SUM(voted) FROM reelect_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736),
+    valid = valid + (SELECT SUM(valid) FROM reelect_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736),
+    akp = akp + (SELECT SUM(akp) FROM reelect_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736),
+    chp = chp + (SELECT SUM(chp) FROM reelect_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736),
+    sp = sp + (SELECT SUM(sp) FROM reelect_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736)
+WHERE nbhd_id = 3730;
 
+DELETE FROM reelect_19
+WHERE nbhd_id = 3716
+OR nbhd_id = 3736;
+
+ALTER TABLE reelect_19
+ADD COLUMN turnout DECIMAL(6,2),
+ADD COLUMN valid_p DECIMAL(5,2),
+ADD COLUMN akp_p DECIMAL(5,2),
+ADD COLUMN chp_p DECIMAL(5,2),
+ADD COLUMN sp_p DECIMAL(5,2),
+ADD COLUMN chp_sp INTEGER,
+ADD COLUMN chp_sp_p DECIMAL(5,2),
+ADD COLUMN chp_sp_r DECIMAL(5,2),
+ADD COLUMN chp_sp30 INTEGER,
+ADD COLUMN chp_sp30_p DECIMAL(5,2),
+ADD COLUMN chp_sp30_r DECIMAL(5,2),
+ADD COLUMN chp_sp40 INTEGER,
+ADD COLUMN chp_sp40_p DECIMAL(5,2),
+ADD COLUMN chp_sp40_r DECIMAL(5,2),
+ADD COLUMN akp_sp50 INTEGER,
+ADD COLUMN akp_sp50_p DECIMAL(5,2),
+ADD COLUMN akp_sp50_r DECIMAL(5,2),
+ADD COLUMN akp_sp55 INTEGER,
+ADD COLUMN akp_sp55_p DECIMAL(5,2),
+ADD COLUMN akp_sp55_r DECIMAL(5,2),
+ADD COLUMN cum_mil_nosp DECIMAL(5,2),
+ADD COLUMN cum_mil_low DECIMAL(5,2),
+ADD COLUMN cum_mil_hi DECIMAL(5,2),
+ADD COLUMN turnout_dif INTEGER,
+ADD COLUMN akp_dif INTEGER,
+ADD COLUMN chp_dif INTEGER,
+ADD COLUMN turnout_rate_ch DECIMAL(7,3),
+ADD COLUMN akp_rate_ch DECIMAL(5,2),
+ADD COLUMN chp_rate_ch DECIMAL(5,2),
+ADD COLUMN akp_rc_turnout DECIMAL(7,4);
+
+UPDATE reelect_19
+SET turnout = voted * 1.0 / registered * 100,
+    valid_p = valid * 1.0 / voted * 100,
+    akp_p = akp * 1.0 / valid * 100,
+    chp_p = chp * 1.0 / valid * 100,
+    sp_p = sp * 1.0 / valid * 100,
+    chp_sp = chp + sp,
+    chp_sp30 = chp + (sp * 3 / 10),
+    chp_sp40 = chp + (sp * 4 / 10),
+    akp_sp50 = akp + (sp * 1 / 2),
+    akp_sp55 = akp + (sp * 55 / 100),
+    turnout_dif = voted - voted_march,
+    akp_dif = akp - akp_march,
+    chp_dif = chp - chp_march;
+
+UPDATE reelect_19
+SET chp_sp_p = chp_sp * 1.0 / valid * 100,
+    chp_sp_r = chp_sp * 1.0 / registered * 100,
+    chp_sp30_p = chp_sp30 * 1.0 / valid * 100,
+    chp_sp30_r = chp_sp30 * 1.0 / registered * 100,
+    chp_sp40_p = chp_sp40 * 1.0 / valid * 100,
+    chp_sp40_r = chp_sp40 * 1.0 / registered * 100,
+    akp_sp50_p = akp_sp50 * 1.0 / valid * 100,
+    akp_sp50_r = akp_sp50 * 1.0 / registered * 100,
+    akp_sp55_p = akp_sp55 * 1.0 / valid * 100,
+    akp_sp55_r = akp_sp55 * 1.0 / registered * 100,
+    cum_mil_nosp = akp * 1.0 / chp,
+    cum_mil_low = akp_sp50 * 1.0 / chp_sp30,
+    cum_mil_hi = akp_sp55 * 1.0 / chp_sp40,
+    turnout_rate_ch = turnout_dif * 1.0 / voted_march,
+    akp_rate_ch = akp_dif * 1.0 / akp_march,
+    chp_rate_ch = chp_dif * 1.0 / chp_march,
+    akp_rc_turnout = akp_dif * 1.0 / akp_march / NULLIF(turnout_dif, 0); 
 
 /* ELECTION 1: June 2015 General */
 /* Additional Features: hdp_r (HDP's vote among registered voters), akp_r (similar) */
@@ -581,100 +839,7 @@ SET chp_sp_p = chp_sp * 1.0 / valid * 100,
     cum_mil_hi = akp_sp55 * 1.0 / chp_sp40; 
 
 
-/* ELECTION 7: 2019 Mayoral Rerun */
-CREATE TABLE reelect_19 AS
-SELECT MAX(n.nbhd_id) AS nbhd_id, r.district, r.neighborhood, SUM(r.registered) AS registered, SUM(r.voted) AS voted, SUM(r.valid) AS valid, SUM(r.akp) AS akp, SUM(r.chp) AS chp, SUM(r.sp) AS sp, MAX(l.voted) AS voted_march, MAX(l.akp) AS akp_march, MAX(l.chp) AS chp_march
-FROM reelect_2019 r
-LEFT JOIN neighborhoods n
-ON n.neighborhood = r.neighborhood
-AND n.district = r.district
-LEFT JOIN local_19 l
-ON l.neighborhood = r.neighborhood
-AND l.district = r.district
-GROUP BY r.district, r.neighborhood
-ORDER BY nbhd_id;
 
-DELETE FROM reelect_19
-WHERE nbhd_id IS NULL;
-
-UPDATE reelect_19
-SET registered = registered + (SELECT SUM(registered) FROM reelect_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736),
-    voted = voted + (SELECT SUM(voted) FROM reelect_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736),
-    valid = valid + (SELECT SUM(valid) FROM reelect_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736),
-    akp = akp + (SELECT SUM(akp) FROM reelect_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736),
-    chp = chp + (SELECT SUM(chp) FROM reelect_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736),
-    sp = sp + (SELECT SUM(sp) FROM reelect_19 WHERE nbhd_id = 3716 OR nbhd_id = 3736)
-WHERE nbhd_id = 3730;
-
-DELETE FROM reelect_19
-WHERE nbhd_id = 3716
-OR nbhd_id = 3736;
-
-ALTER TABLE reelect_19
-ADD COLUMN turnout DECIMAL(6,2),
-ADD COLUMN valid_p DECIMAL(5,2),
-ADD COLUMN akp_p DECIMAL(5,2),
-ADD COLUMN chp_p DECIMAL(5,2),
-ADD COLUMN sp_p DECIMAL(5,2),
-ADD COLUMN chp_sp INTEGER,
-ADD COLUMN chp_sp_p DECIMAL(5,2),
-ADD COLUMN chp_sp_r DECIMAL(5,2),
-ADD COLUMN chp_sp30 INTEGER,
-ADD COLUMN chp_sp30_p DECIMAL(5,2),
-ADD COLUMN chp_sp30_r DECIMAL(5,2),
-ADD COLUMN chp_sp40 INTEGER,
-ADD COLUMN chp_sp40_p DECIMAL(5,2),
-ADD COLUMN chp_sp40_r DECIMAL(5,2),
-ADD COLUMN akp_sp50 INTEGER,
-ADD COLUMN akp_sp50_p DECIMAL(5,2),
-ADD COLUMN akp_sp50_r DECIMAL(5,2),
-ADD COLUMN akp_sp55 INTEGER,
-ADD COLUMN akp_sp55_p DECIMAL(5,2),
-ADD COLUMN akp_sp55_r DECIMAL(5,2),
-ADD COLUMN cum_mil_nosp DECIMAL(5,2),
-ADD COLUMN cum_mil_low DECIMAL(5,2),
-ADD COLUMN cum_mil_hi DECIMAL(5,2),
-ADD COLUMN turnout_dif INTEGER,
-ADD COLUMN akp_dif INTEGER,
-ADD COLUMN chp_dif INTEGER,
-ADD COLUMN turnout_rate_ch DECIMAL(7,3),
-ADD COLUMN akp_rate_ch DECIMAL(5,2),
-ADD COLUMN chp_rate_ch DECIMAL(5,2),
-ADD COLUMN akp_rc_turnout DECIMAL(7,4);
-
-UPDATE reelect_19
-SET turnout = voted * 1.0 / registered * 100,
-    valid_p = valid * 1.0 / voted * 100,
-    akp_p = akp * 1.0 / valid * 100,
-    chp_p = chp * 1.0 / valid * 100,
-    sp_p = sp * 1.0 / valid * 100,
-    chp_sp = chp + sp,
-    chp_sp30 = chp + (sp * 3 / 10),
-    chp_sp40 = chp + (sp * 4 / 10),
-    akp_sp50 = akp + (sp * 1 / 2),
-    akp_sp55 = akp + (sp * 55 / 100),
-    turnout_dif = voted - voted_march,
-    akp_dif = akp - akp_march,
-    chp_dif = chp - chp_march;
-
-UPDATE reelect_19
-SET chp_sp_p = chp_sp * 1.0 / valid * 100,
-    chp_sp_r = chp_sp * 1.0 / registered * 100,
-    chp_sp30_p = chp_sp30 * 1.0 / valid * 100,
-    chp_sp30_r = chp_sp30 * 1.0 / registered * 100,
-    chp_sp40_p = chp_sp40 * 1.0 / valid * 100,
-    chp_sp40_r = chp_sp40 * 1.0 / registered * 100,
-    akp_sp50_p = akp_sp50 * 1.0 / valid * 100,
-    akp_sp50_r = akp_sp50 * 1.0 / registered * 100,
-    akp_sp55_p = akp_sp55 * 1.0 / valid * 100,
-    akp_sp55_r = akp_sp55 * 1.0 / registered * 100,
-    cum_mil_nosp = akp * 1.0 / chp,
-    cum_mil_low = akp_sp50 * 1.0 / chp_sp30,
-    cum_mil_hi = akp_sp55 * 1.0 / chp_sp40,
-    turnout_rate_ch = turnout_dif * 1.0 / voted_march,
-    akp_rate_ch = akp_dif * 1.0 / akp_march,
-    chp_rate_ch = chp_dif * 1.0 / chp_march,
-    akp_rc_turnout = akp_dif * 1.0 / akp_march / NULLIF(turnout_dif, 0); 
 
 /* Outputs final tables to csv */
 COPY (SELECT * FROM reelect_19 ORDER BY nbhd_id) TO '/Users/ercansen/Desktop/apps/istanbul/sql outputs/reelect_19.csv' WITH CSV HEADER;
