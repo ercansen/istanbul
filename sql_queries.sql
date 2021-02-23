@@ -1,7 +1,7 @@
 /*  Project Name: Istanbul 
     By: Ercan Sen
     Date: 12-10-2020
-    Does: Aggregates the ballot box data into a neighborhood-wise elections and political features database,
+    Does: Aggregates the ballot box data into a neighborhood-wise election results and political features database,
           using a series of SQL queries 
 */
 
@@ -303,7 +303,7 @@ INCREMENT 100;
 
 CREATE TABLE districts (
     id INTEGER PRIMARY KEY DEFAULT NEXTVAL('districts_seq'),
-    district VARCHAR (50)
+    district VARCHAR (50) UNIQUE NOT NULL
 );
 
 
@@ -324,10 +324,10 @@ ORDER BY district;
 -- The relationship between 'neighborhoods' and 'districts' is many-to-one
 
 CREATE TABLE neighborhoods (
-    id INTEGER,
-    dist_id INTEGER,
-    district VARCHAR (50),
-    neighborhood VARCHAR (100),
+    id INTEGER PRIMARY KEY,
+    dist_id INTEGER NOT NULL,
+    district VARCHAR (50) NOT NULL,
+    neighborhood VARCHAR (100) NOT NULL,
     CONSTRAINT fk_district                     -- adds foreign key constraint 
         FOREIGN KEY(dist_id)
             REFERENCES districts(id)
@@ -342,7 +342,7 @@ INSERT INTO neighborhoods
 (SELECT RANK () OVER (
                     PARTITION BY MAX(d.id)
                     ORDER BY r.neighborhood
-                ) id,                          -- subquery using RANK OVER PARTITION to obtain neighborhood IDs
+                ) + MAX(d.id) id,              -- subquery using RANK OVER PARTITION to obtain neighborhood IDs
                 MAX(d.id),                     -- MAX is arbitrary, other agg.fnc.s would work too since all d.id values are the same within group
                 r.district, 
                 r.neighborhood 
@@ -353,18 +353,6 @@ WHERE RIGHT(r.neighborhood, 4) = 'MAH.'        -- only gets records that end wit
 GROUP BY r.district, r.neighborhood
 ORDER BY r.district, r.neighborhood);
 
-
--- Updates the value of nbhd. id by adding the id itself (rank among district) to district id
-
-UPDATE neighborhoods     
-SET id = id + dist_id;
-
-
--- Sets the 'id' column of 'neighborhoods' table as the primary key
--- No error at this step implies that nbhd. IDs are unique, as desired 
-
-ALTER TABLE neighborhoods
-ADD PRIMARY KEY (id);
 
 
 /* STEP 2 ends*/
@@ -409,7 +397,7 @@ Common abbreviations in column names:
 -- Creates the table to hold aggregated neighborhood-wise elections results and additional features
 
 CREATE TABLE reelect_19 AS
-SELECT MAX(n.nbhd_id) AS nbhd_id,         -- MAX is arbitrary, other agg.fnc.s would work too since all d.id values are the same within group
+SELECT MAX(n.id) AS nbhd_id,         -- MAX is arbitrary, other agg.fnc.s would work too since all d.id values are the same within group
        r.district, 
        r.neighborhood, 
        SUM(r.registered) AS registered,
@@ -418,14 +406,17 @@ SELECT MAX(n.nbhd_id) AS nbhd_id,         -- MAX is arbitrary, other agg.fnc.s w
        SUM(r.akp) AS akp, 
        SUM(r.chp) AS chp, 
        SUM(r.sp) AS sp, 
-       SUM(l.voted) AS voted_march,       -- Includes columns from the previous election, to engineer new features regarding changes in voter behavior
-       SUM(l.akp) AS akp_march, 
-       SUM(l.chp) AS chp_march
+       MAX(l.voted) AS voted_march,       -- Includes columns from the previous election, to engineer new features regarding changes in voter behavior
+       MAX(l.akp) AS akp_march, 
+       MAX(l.chp) AS chp_march
 FROM reelect_2019 r
     INNER JOIN neighborhoods n
         ON n.neighborhood = r.neighborhood
         AND n.district = r.district
-    INNER JOIN local_2019 l
+    INNER JOIN (
+        SELECT neighborhood, district, SUM(voted), SUM(akp), SUM(chp)
+        FROM local_2019
+        GROUP BY neighborhood, district) l
         ON l.neighborhood = r.neighborhood
         AND l.district = r.district
 GROUP BY r.district, r.neighborhood
@@ -528,7 +519,7 @@ SET chp_sp_p = chp_sp * 1.0 / valid * 100,
 -- ELECTION 2: 2019 Local (cancelled)
 
 CREATE TABLE local_19 AS
-SELECT MAX(nbhd_id) AS nbhd_id, 
+SELECT MAX(n.id) AS nbhd_id, 
        l.district, 
        l.neighborhood, 
        SUM(registered) AS registered, 
@@ -738,12 +729,16 @@ SELECT MAX(n.id) AS nbhd_id,
        SUM(p.aksener) AS aksener, 
        SUM(p.selo) AS selo, 
        SUM(p.karamolla) AS karamolla, 
-       MAX(m.cumhur_tot) AS cumhur_tot_mp
+       (MAX(m.akp)+MAX(m.mhp)+MAX(m.cumhur)) AS cumhur_tot_mp
 FROM pres_2018 p
     INNER JOIN neighborhoods n
         ON n.neighborhood = p.neighborhood
         AND n.district = p.district
-    LEFT JOIN mp_18 m
+    LEFT JOIN (
+        SELECT district, neighborhood, SUM(akp) akp, SUM(mhp) mhp, SUM(cumhur) cumhur
+        FROM mp_2018
+        GROUP BY district, neighborhood
+        ) m
         ON m.neighborhood = p.neighborhood
         AND m.district = p.district
 GROUP BY p.district, p.neighborhood
@@ -893,13 +888,17 @@ SELECT MAX(n.id) AS nbhd_id,
        SUM(g.mhp) AS mhp, 
        SUM(g.hdp) AS hdp, 
        SUM(g.sp) AS sp, 
-       MAX(p.akp_r) AS jun_akp_r, 
-       MAX(p.hdp_r) AS jun_hdp_r
+       (MAX(p.akp) * 1.0 / MAX(p.registered) * 100.0) AS jun_akp_r, 
+       (MAX(p.hdp) * 1.0 / MAX(p.registered) * 100.0) AS jun_hdp_r
 FROM gen_nov_2015 g
     INNER JOIN neighborhoods n
         ON n.neighborhood = g.neighborhood
         AND n.district = g.district
-    LEFT JOIN gen_jun_15 p
+    INNER JOIN (
+        SELECT district, neighborhood, SUM(akp) akp, SUM(hdp) hdp, SUM(registered) registered
+        FROM gen_jun_2015
+        GROUP BY district, neighborhood
+        ) p
         ON p.neighborhood = g.neighborhood
         AND p.district = g.district
 GROUP BY g.district, g.neighborhood
